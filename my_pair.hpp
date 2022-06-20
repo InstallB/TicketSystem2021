@@ -17,6 +17,25 @@ public:
 	pair(const pair<U1, U2> &other) : first(other.first), second(other.second) {}
 	template<class U1, class U2>
 	pair(pair<U1, U2> &&other) : first(other.first), second(other.second) {}
+	bool operator < (const pair <T1,T2> &other)const{
+		if(first == other.first) return second < other.second;
+		return first < other.first;
+	}
+	bool operator == (const pair <T1,T2> &other)const{
+		return first == other.first && second == other.second;
+	}
+	bool operator != (const pair <T1,T2> &other)const{
+		return !(*this == other);
+	}
+	bool operator > (const pair <T1,T2> &other)const{
+		if(first == other.first) return second > other.second;
+		return first > other.first;
+	}
+	pair <T1,T2> & operator = (const pair <T1,T2> &other){
+		if(this == &other) return *this;
+		first = other.first; second = other.second;
+		return *this;
+	}
 };
 
 }

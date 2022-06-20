@@ -35,7 +35,7 @@ public:
 	~string(){ delete[] s; }
 	int size() const { return size_; }
 	void clear(){ if(s != nullptr) delete[] s; s = nullptr; size_ = 0; max_size = 8; }
-	string operator = (const string &other){
+	string & operator = (const string &other){
 		if(this == &other) return *this;
 		size_ = other.size_; max_size = other.max_size;
 		char* t = new char[size_];
@@ -43,7 +43,12 @@ public:
 		delete[] s; s = t;
 		return *this;
 	}
-	string operator += (const char &ch){
+	string & operator += (const char &ch){
+		if(size_ == max_size) double_space();
+		s[size_ ++] = ch;
+		return *this;
+	}
+	string operator + (const char &ch){
 		if(size_ == max_size) double_space();
 		s[size_ ++] = ch;
 		return *this;
@@ -57,7 +62,7 @@ public:
 		for(int i = 0;i < obj.size_;i ++) (*this) += obj.s[i];
 		return *this;
 	}
-	bool operator < (const string &other){
+	bool operator < (const string &other) const {
 		for(int i = 0;i < size_;i ++){
 			if(i >= other.size_) return false;
 			if(s[i] < other.s[i]) return true;
@@ -66,12 +71,21 @@ public:
 		if(size_ < other.size_) return true;
 		return false;
 	}
-	bool operator == (const string &other){
+	bool operator > (const string &other) const {
+		for(int i = 0;i < size_;i ++){
+			if(i >= other.size_) return true;
+			if(s[i] < other.s[i]) return false;
+			if(s[i] > other.s[i]) return true;
+		}
+		if(size_ < other.size_) return false;
+		return false;
+	}
+	bool operator == (const string &other) const {
 		if(size_ != other.size_) return false;
 		for(int i = 0;i < size_;i ++) if(s[i] != other.s[i]) return false;
 		return true;
 	}
-	bool operator != (const string &other){
+	bool operator != (const string &other) const {
 		return !(*this == other); 
 	}
 	char & operator [] (int x) const {

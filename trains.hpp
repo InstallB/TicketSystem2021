@@ -1,8 +1,6 @@
 #ifndef TRAINS_HPP
 #define TRAINS_HPP
 
-#include "accounts.hpp"
-#include "orders.hpp"
 #include "my_string.hpp"
 #include "my_pair.hpp"
 #include "get_token.hpp"
@@ -38,8 +36,10 @@ public:
 	~train(){}
 	bool operator < (const train &other)const{ return id < other.id; }
 	class compare_id{
-		bool operator ()(const train &x,const train &y){
-			return strcmp(x.trainID,y.trainID) < 0;
+	public:
+		bool operator ()(const pair <int,train> &x,const pair <int,train> &y){
+			if(x.first == y.first) return strcmp(x.second.trainID,y.second.trainID) > 0;
+			return x.first > y.first;
 		}
 	};
 	bool operator == (const train &other)const{ return id == other.id; }
@@ -50,11 +50,11 @@ class train_management{
 	friend class order_management;
 private:
 	fstream train_data;
-	RainyMemory::AlternativeMultiBPlusTree <string,int> train_id_map;
-	RainyMemory::AlternativeMultiBPlusTree <string,int> train_pos_map;
+	RainyMemory::AlternativeMultiBPlusTree <string,int>* train_id_map;
+	RainyMemory::AlternativeMultiBPlusTree <string,int>* train_pos_map;
 	int get_id(const string &u){
 		vector <int> vec;
-		train_id_map.find(u,vec);
+		train_id_map->find(u,vec);
 		return vec.size() ? vec[0] : -1;
 	}
 	void locate_read(train &t,int x){
@@ -73,17 +73,21 @@ public:
 		train_data.open("train_data",fstream::binary | fstream::out);
 		train_data.close();
 		train_data.open("train_data",fstream::binary);
-		train_id_map.clear();
-		train_pos_map.clear();
+		train_id_map->clear();
+		train_pos_map->clear();
 	}
 	train_management(){
+		train_id_map = new RainyMemory::AlternativeMultiBPlusTree <string,int>("train_id_map");
+		train_pos_map = new RainyMemory::AlternativeMultiBPlusTree <string,int>("train_pos_map");
 		train_data.open("train_data",fstream::binary);
 	}
 	~train_management(){
+		delete train_id_map;
+		delete train_pos_map;
 		train_data.close();
 	}
 	int add_train(const string &i,int n,int m,const string &s,const string &p,const string &x,const string &t,const string &o,const string &d,char y){
-		vector <int> vec; train_id_map.find(i,vec); if(vec.size()) return -1;
+		vector <int> vec; train_id_map->find(i,vec); if(vec.size()) return -1;
 		
 		string tmp,start_station;
 		train now; int id = train_number ++;
@@ -95,7 +99,7 @@ public:
 		now.stationNum = n;
 		// stations[100][12];
 		for(int k = 0,pos = 0,j = 0;j < s.size();j ++){
-			if(s[i] == '|') k ++,pos = 0;
+			if(s[j] == '|') k ++,pos = 0;
 			else now.stations[k][pos ++] = s[j];
 			if(k == 0) start_station += s[j];
 		}
@@ -104,7 +108,7 @@ public:
 		// prices[99];
 		tmp = "";
 		for(int k = 0,j = 0;j < p.size();j ++){
-			if(s[i] == '|'){
+			if(s[j] == '|'){
 				now.prices[k ++] = string_to_int(tmp);
 				tmp = "";
 			}
@@ -115,7 +119,7 @@ public:
 		// travelTimes[99];
 		tmp = "";
 		for(int k = 0,j = 0;j < t.size();j ++){
-			if(s[i] == '|'){
+			if(s[j] == '|'){
 				now.travelTimes[k ++] = string_to_int(tmp);
 				tmp = "";
 			}
@@ -125,7 +129,7 @@ public:
 		if(n > 2){
 		tmp = "";
 			for(int k = 0,j = 0;j < o.size();j ++){
-				if(s[i] == '|'){
+				if(s[j] == '|'){
 					now.stopoverTimes[k ++] = string_to_int(tmp);
 					tmp = "";
 				}
@@ -154,9 +158,9 @@ public:
 		}
 		
 		locate_write(now,id);
-		train_id_map.insert(i,id,id);
+		train_id_map->insert(i,id,id);
 		for(int j = 0;j < now.stationNum;j ++){
-			train_pos_map.insert(now.stations[j],id,id);
+			train_pos_map->insert(now.stations[j],id,id);
 		}
 		return 0;
 	}
@@ -165,8 +169,8 @@ public:
 		if(id == -1) return -1; // train not found
 		locate_read(now,id);
 		if(now.is_released) return -1;
-		train_id_map.erase(i,id);
-		train_pos_map.erase(i,id);
+		train_id_map->erase(i,id);
+		train_pos_map->erase(i,id);
 		return 0;
 	}
 	int release_train(const string &i){
@@ -196,8 +200,8 @@ public:
 	}
 	void query_ticket(const string &s,const string &t,const string &sd,const string &P = "time"){
 		vector <int> vec; int d = date_to_int(sd);
-		sjtu::priority_queue <pair <int,train>,train::compare_ID> pq;
-		train_pos_map.find(s,vec);
+		priority_queue <pair <int,train>,train::compare_id> pq;
+		train_pos_map->find(s,vec);
 		for(int p : vec){
 			int id = p,l,r = -1,sum_time = 0,sum_price = 0; train now;
 			locate_read(now,id);
@@ -213,13 +217,13 @@ public:
 				sum_time += now.travelTimes[i];
 				if(i != l) sum_time += now.stopoverTimes[i - 1];
 			}
-			if(P[0] == 't') pq.push(pair <int,train> (sum_time,now);
-			if(P[0] == 'c') pq.push(pair <int,train> (sum_price,now);
+			if(P[0] == 't') pq.push(pair <int,train> (sum_time,now));
+			if(P[0] == 'c') pq.push(pair <int,train> (sum_price,now));
 		}
 		cout << pq.size() << '\n';
 		while(!pq.empty()){
-			train now = q.top().second;
-			int l,r,min_ticket = 0x3f3f3f3f,sum_price = 0; train now;
+			train now = pq.top().second;
+			int l,r,min_ticket = 0x3f3f3f3f,sum_price = 0;
 			for(int i = 0;i < now.stationNum;i ++){
 				if(s == now.stations[i]) l = i;
 				if(t == now.stations[i]){ r = i; break; }
@@ -234,43 +238,44 @@ public:
 			cout << now.stations[l] << ' ' << int_to_date(l_d + now.pre[l]) << " -> ";
 			cout << now.stations[r] << ' ' << int_to_date(l_d + now.pre[r]) << ' ';
 			cout << sum_price << ' ' << min_ticket << endl;
+			pq.pop();
 		}
 	}
 	void query_transfer(const string &s,const string &t,const string &sd,const string &P = "time"){
 		vector <int> vecs_id,vect_id; int d = date_to_int(sd);
-		train_pos_map.find(s,vecs_id);
-		train_pos_map.find(t,vect_id);
+		train_pos_map->find(s,vecs_id);
+		train_pos_map->find(t,vect_id);
 		vector <train> vecs,vect;
 		for(int p : vecs_id){ train now; locate_read(now,p); vecs.push_back(now); }
 		for(int p : vect_id){ train now; locate_read(now,p); vect.push_back(now); }
-		pair <pair <int,int>,pair <string,string> > ans,tmp; train ap,aq; bool has_ans = false; int ap,aq,ap_l,ap_r,aq_l,aq_r,ap_l_d,aq_l_d,ap_sum_price,ap_min_ticket,aq_sum_price,aq_min_ticket;
+		pair <pair <int,int>,pair <string,string> > ans,tmp; train ap,aq; bool has_ans = false; int ap_l,ap_r,aq_l,aq_r,ap_l_d,aq_l_d,ap_sum_price,ap_min_ticket,aq_sum_price,aq_min_ticket;
 		
 		for(train p : vecs){
 			int p_l; for(int i = 0;i < p.stationNum;i ++) if(s == p.stations[i]) p_l = i;
-			int p_l_d = d - p.pre[l] / DAY * DAY,p_t_d = (p_l_d - p.saleDate[0]) / DAY;
+			int p_l_d = d - p.pre[p_l] / DAY * DAY,p_t_d = (p_l_d - p.saleDate[0]) / DAY;
 			if(!(p.saleDate[0] <= p_l_d && p_l_d <= p.saleDate[1])) continue;
 			
 			map <string,pair <int,int> > mp; // pair <time,p_r>
-			for(int i = p_l + 1;i < p.stationNum;i ++) mp[p.station[i]] = p_l_d + p.pre[i];
+			for(int i = p_l + 1;i < p.stationNum;i ++) mp[p.stations[i]] = pair <int,int> (p_l_d + p.pre[i],i);
 			
 			for(train q : vect){
-				int q_r; for(int i = 0;i < q.stationNum;i ++) if(t == q.stations[i]) q_r = t;
+				int q_r,p_r,q_l; for(int i = 0;i < q.stationNum;i ++) if(t == q.stations[i]) q_r = i;
 				for(int i = 0;i < q_r;i ++){
 					if(mp.find(q.stations[i]) == mp.end()) continue;
-					int q_l_d = mp[q.stations[i]].first / DAY * DAY + DAY * (q.pre[i] % DAY <= mp[q.stations[i]].first % DAY) - q.pre[i] / DAY * DAY,q_t_d = (q_l_d - q.SaleDate[0]) / DAY;
+					int q_l_d = mp[q.stations[i]].first / DAY * DAY + DAY * (q.pre[i] % DAY <= mp[q.stations[i]].first % DAY) - q.pre[i] / DAY * DAY,q_t_d = (q_l_d - q.saleDate[0]) / DAY;
 					if(!(q.saleDate[0] <= q_l_d && q_l_d <= q.saleDate[1])) continue;
 					
 					p_r = mp[q.stations[i]].second; q_l = i;
 					int sum_time = q_l_d + q.pre[q_r] - (p_l_d + p.pre[q_l]),sum_price_p = 0,sum_price_q = 0,min_seat_p = 0x3f3f3f3f,min_seat_q = 0x3f3f3f3f;
-					for(int i = p_l;i < p_r;i ++){ sum_price_p += p.prices[i]; min_seat_p = min(min_seat,p.tickets[p_t_d][i]); }
-					for(int i = q_l;i < q_r;i ++){ sum_price_q += q.prices[i]; min_seat_q = min(min_seat,q.tickets[q_t_d][i]); }
+					for(int i = p_l;i < p_r;i ++){ sum_price_p += p.prices[i]; min_seat_p = min(min_seat_p,p.tickets[p_t_d][i]); }
+					for(int i = q_l;i < q_r;i ++){ sum_price_q += q.prices[i]; min_seat_q = min(min_seat_q,q.tickets[q_t_d][i]); }
 					
 					if(P[0] == 'c'){
-						tmp = pair <pair <int,int>,pair <string,string> > (pair <int,int> (sum_price,sum_cost),pair <string,string> (p.trainID,q.trainID));
+						tmp = pair <pair <int,int>,pair <string,string> > (pair <int,int> (sum_price_p + sum_price_q,sum_time),pair <string,string> (p.trainID,q.trainID));
 						if(tmp < ans || !has_ans){ ans = tmp; has_ans = true; ap = p; aq = q; ap_l = p_l; ap_r = p_r; aq_l = q_l; aq_r = q_r; ap_l_d = p_l_d; aq_l_d = q_l_d; ap_sum_price = sum_price_p; ap_min_ticket = min_seat_p; aq_sum_price = sum_price_q; aq_min_ticket = min_seat_q; }
 					}
 					if(P[0] == 't'){
-						tmp = pair <pair <int,int>,pair <string,string> > (pair <int,int> (sum_cost,sum_price),pair <string,string> (p.trainID,q.trainID));
+						tmp = pair <pair <int,int>,pair <string,string> > (pair <int,int> (sum_time,sum_price_p + sum_price_q),pair <string,string> (p.trainID,q.trainID));
 						if(tmp < ans || !has_ans){ ans = tmp; has_ans = true; ap = p; aq = q; ap_l = p_l; ap_r = p_r; aq_l = q_l; aq_r = q_r; ap_l_d = p_l_d; aq_l_d = q_l_d; ap_sum_price = sum_price_p; ap_min_ticket = min_seat_p; aq_sum_price = sum_price_q; aq_min_ticket = min_seat_q; }
 					}
 				}

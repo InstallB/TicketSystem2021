@@ -36,8 +36,8 @@ public:
 
 class order_management{
 	fstream order_data;
-	RainyMemory::AlternativeMultiBPlusTree <int,int> ticket_user_map;
-	RainyMemory::AlternativeMultiBPlusTree <pair <int,int>,int> ticket_train_map; // "status = pending" orders
+	RainyMemory::AlternativeMultiBPlusTree <int,int>* ticket_user_map;
+	RainyMemory::AlternativeMultiBPlusTree <pair <int,int>,int>* ticket_train_map; // "status = pending" orders
 	
 	void locate_read(order &acc,int x){
 		order_data.seekg(x * sizeof(order));
@@ -53,7 +53,7 @@ class order_management{
 		for(int i = o.start;i < o.end;i ++) if(t.tickets[o.train_date][i] < o.number) flg = 0;
 		if(flg){
 			for(int i = o.start;i < o.end;i ++) t.tickets[o.train_date][i] -= o.number;
-			ticket_train_map.erase(pair <int,int> (o.train_id,o.train_date),id);
+			ticket_train_map->erase(pair <int,int> (o.train_id,o.train_date),oid);
 			o.status = 0;
 			locate_write(o,oid);
 		}
@@ -68,14 +68,18 @@ public:
 		order_data.open("order_data",fstream::binary | fstream::out);
 		order_data.close();
 		order_data.open("order_data",fstream::binary);
-		ticket_user_map.clear();
-		ticket_train_map.clear();
+		ticket_user_map->clear();
+		ticket_train_map->clear();
 	}
 	order_management(account_management* account__,train_management* train__){
 		account_ = account__; train_ = train__;
+		ticket_user_map = new RainyMemory::AlternativeMultiBPlusTree <int,int> ("ticket_user_map");
+		ticket_train_map = new RainyMemory::AlternativeMultiBPlusTree <pair <int,int>,int> ("ticket_train_map");
 		order_data.open("order_data",fstream::binary);
 	}
 	~order_management(){
+		delete ticket_user_map;
+		delete ticket_train_map;
 		order_data.close();
 	}
 	void buy_ticket(const string &u,const string &i,int d,int n,const string &fr,const string &to,bool q = false){
@@ -89,16 +93,16 @@ public:
 			if(fr == t.stations[j]) o.start = j;
 			if(to == t.stations[j]) o.end = j;
 		}
-		o.train_date = d / DAY - (t.startTime + t.pre[o.start])) / DAY;
+		o.train_date = d / DAY - (t.startTime + t.pre[o.start]) / DAY;
 		o.price = 0; for(int j = o.start;j < o.end;j ++) o.price += t.prices[j];
 		
 		int min_seat = 0x3f3f3f3f; for(int j = o.start;j < o.end;j ++) min_seat = min(min_seat,t.tickets[o.train_date][j]);
 		if(min_seat < n && !q){ order_number --; cout << -1 << endl; return; }
 		locate_write(o,oid);
-		ticket_user_map.insert(aid,oid,oid);
+		ticket_user_map->insert(aid,oid,oid);
 		if(min_seat < n && q){
 			cout << "queue" << endl;
-			ticket_train_map.insert(pair <int,int> (o.train_id,o.train_date),oid,oid);
+			ticket_train_map->insert(pair <int,int> (o.train_id,o.train_date),oid,oid);
 			return;
 		}
 		for(int j = o.start;j < o.end;j ++) t.tickets[o.train_date][j] -= n;
@@ -107,7 +111,7 @@ public:
 	}
 	void query_order(const string &u){
 		int aid = account_->get_id(u);
-		vector <int> vec; ticket_user_map.find(aid,vec);
+		vector <int> vec; ticket_user_map->find(aid,vec);
 		order o; train t;
 		for(int i = 0;i < vec.size();i ++){
 			locate_read(o,vec[i]);
@@ -123,11 +127,11 @@ public:
 	int refund_ticket(const string &u,int n = 1){
 		n --;
 		int aid = account_->get_id(u);
-		account now; account_->locate_read(now,u);
+		account now; account_->locate_read(now,aid);
 		if(!now.is_login) return -1;
 		
 		vector <int> vec;
-		ticket_user_map.find(aid,vec);
+		ticket_user_map->find(aid,vec);
 		if(n >= vec.size()) return -1; // index_out_of_bound
 		int id = vec[n];
 		order o; locate_read(o,id);
@@ -136,12 +140,12 @@ public:
 			int tid = o.train_id;
 			train t;
 			train_->locate_read(t,tid);
-			for(int i = o.start;i < o.end;i ++) t.tickets[i] += o.number;
-			ticket_train_map.find(pair <int,int> (o.train_id,o.train_date),vec);
+			for(int i = o.start;i < o.end;i ++) t.tickets[o.train_date][i] += o.number;
+			ticket_train_map->find(pair <int,int> (o.train_id,o.train_date),vec);
 			for(int i = (int)(vec.size()) - 1;i >= 0;i --) judge(t,vec[i]);
 			train_->locate_write(t,tid);
 		} // success
-		if(o.status == 1) ticket_train_map.erase(pair <int,int> (o.train_id,o.train_date),id);
+		if(o.status == 1) ticket_train_map->erase(pair <int,int> (o.train_id,o.train_date),id);
 		o.status = 2;
 		locate_write(o,id);
 		return 0;

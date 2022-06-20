@@ -26,12 +26,7 @@ void clean(account_management* account_,train_management* train_,order_managemen
 }
 
 void exit(account_management* account_,train_management* train_,order_management* order_){
-	account now;
-	for(int i = 0;i < account_.user_number;i ++){
-		account_->locate_read(now,i);
-		now.is_login = false;
-		account_->locate_write(now,i);
-	}
+	account_->logout_all();
 	fstream file;
 	file.open("numbers",fstream::out);
 	file.close();
