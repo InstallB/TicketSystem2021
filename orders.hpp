@@ -67,7 +67,7 @@ public:
 		order_data.close();
 		order_data.open("order_data",fstream::binary | fstream::out);
 		order_data.close();
-		order_data.open("order_data",fstream::binary);
+		order_data.open("order_data",fstream::binary | fstream::in | fstream::out | fstream::app);
 		ticket_user_map->clear();
 		ticket_train_map->clear();
 	}
@@ -75,7 +75,7 @@ public:
 		account_ = account__; train_ = train__;
 		ticket_user_map = new RainyMemory::AlternativeMultiBPlusTree <int,int> ("ticket_user_map");
 		ticket_train_map = new RainyMemory::AlternativeMultiBPlusTree <pair <int,int>,int> ("ticket_train_map");
-		order_data.open("order_data",fstream::binary);
+		order_data.open("order_data",fstream::binary | fstream::in | fstream::out | fstream::app);
 	}
 	~order_management(){
 		delete ticket_user_map;

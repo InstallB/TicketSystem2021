@@ -21,7 +21,7 @@ public:
 	int id;
 	char trainID[21];
 	int stationNum;
-	char stations[100][12];
+	char stations[100][22];
 	int seatNum;
 	int prices[99];
 	int startTime;
@@ -72,14 +72,14 @@ public:
 		train_data.close();
 		train_data.open("train_data",fstream::binary | fstream::out);
 		train_data.close();
-		train_data.open("train_data",fstream::binary);
+		train_data.open("train_data",fstream::binary | fstream::in | fstream::out | fstream::app);
 		train_id_map->clear();
 		train_pos_map->clear();
 	}
 	train_management(){
 		train_id_map = new RainyMemory::AlternativeMultiBPlusTree <string,int>("train_id_map");
 		train_pos_map = new RainyMemory::AlternativeMultiBPlusTree <string,int>("train_pos_map");
-		train_data.open("train_data",fstream::binary);
+		train_data.open("train_data",fstream::binary | fstream::in | fstream::out | fstream::app);
 	}
 	~train_management(){
 		delete train_id_map;
@@ -94,12 +94,12 @@ public:
 		// id
 		now.id = id;
 		// trainID[21];
-		for(int j = 0;j < i.size();j ++) now.trainID[j] = i[j];
+		for(int j = 0;j < i.size();j ++) now.trainID[j] = i[j]; now.trainID[i.size()] = '\0';
 		// stationNum;
 		now.stationNum = n;
 		// stations[100][12];
 		for(int k = 0,pos = 0,j = 0;j < s.size();j ++){
-			if(s[j] == '|') k ++,pos = 0;
+			if(s[j] == '|'){ now.stations[k][pos + 1] = '\0'; k ++,pos = 0; }
 			else now.stations[k][pos ++] = s[j];
 			if(k == 0) start_station += s[j];
 		}
@@ -108,7 +108,7 @@ public:
 		// prices[99];
 		tmp = "";
 		for(int k = 0,j = 0;j < p.size();j ++){
-			if(s[j] == '|'){
+			if(p[j] == '|'){
 				now.prices[k ++] = string_to_int(tmp);
 				tmp = "";
 			}
@@ -119,7 +119,7 @@ public:
 		// travelTimes[99];
 		tmp = "";
 		for(int k = 0,j = 0;j < t.size();j ++){
-			if(s[j] == '|'){
+			if(t[j] == '|'){
 				now.travelTimes[k ++] = string_to_int(tmp);
 				tmp = "";
 			}
@@ -127,9 +127,9 @@ public:
 		}
 		// stopoverTimes[98];
 		if(n > 2){
-		tmp = "";
+			tmp = "";
 			for(int k = 0,j = 0;j < o.size();j ++){
-				if(s[j] == '|'){
+				if(o[j] == '|'){
 					now.stopoverTimes[k ++] = string_to_int(tmp);
 					tmp = "";
 				}

@@ -9,27 +9,27 @@ using namespace std;
 namespace sjtu{
 
 class string{
-	friend ostream & operator << (ostream & os,const string &obj);
+	friend ostream & operator << (ostream &os,const string &obj);
 private:
 	int max_size;
 	void double_space(){
 		max_size <<= 1;
 		char* t = new char[max_size];
 		for(int i = 0;i < size_;i ++) t[i] = s[i];
-		delete[] s;
+		delete[] s; s = t;
 	}
 public:
 	char* s;
 	int size_;
-	string(){ s = nullptr; size_ = 0; max_size = 8; }
+	string(){ s = nullptr; size_ = 0; max_size = 8; s = new char[max_size]; }
 	string(const string &other){
 		size_ = other.size_; max_size = other.max_size;
-		s = new char[size_];
+		s = new char[max_size];
 		for(int i = 0;i < size_;i ++) s[i] = other.s[i];
 	}
 	string(char* other){
 		size_ = strlen(other); max_size = size_;
-		s = new char[size_];
+		s = new char[max_size];
 		for(int i = 0;i < size_;i ++) s[i] = other[i];
 	}
 	~string(){ delete[] s; }
@@ -38,7 +38,7 @@ public:
 	string & operator = (const string &other){
 		if(this == &other) return *this;
 		size_ = other.size_; max_size = other.max_size;
-		char* t = new char[size_];
+		char* t = new char[max_size];
 		for(int i = 0;i < size_;i ++) t[i] = other.s[i];
 		delete[] s; s = t;
 		return *this;
@@ -49,18 +49,19 @@ public:
 		return *this;
 	}
 	string operator + (const char &ch){
-		if(size_ == max_size) double_space();
-		s[size_ ++] = ch;
-		return *this;
+		string now = *this;
+		now += ch;
+		return now;
 	}
 	string operator + (char* obj){
-		int len = strlen(obj);
-		for(int i = 0;i < len;i ++) (*this) += obj[i];
-		return *this;
+		int len = strlen(obj); string now = *this;
+		for(int i = 0;i < len;i ++) now += obj[i];
+		return now;
 	}
 	string operator + (const string &obj){
-		for(int i = 0;i < obj.size_;i ++) (*this) += obj.s[i];
-		return *this;
+		string now = *this;
+		for(int i = 0;i < obj.size_;i ++) now += obj.s[i];
+		return now;
 	}
 	bool operator < (const string &other) const {
 		for(int i = 0;i < size_;i ++){

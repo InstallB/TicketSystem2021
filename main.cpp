@@ -19,13 +19,22 @@
 using namespace sjtu;
 
 int main(){
+	freopen("1.out","w",stdout);
 	fstream file("numbers");
 	account_management* account_ = new account_management;
 	train_management* train_ = new train_management;
 	order_management* order_ = new order_management(account_,train_);
 	account_->user_number = train_->train_number = order_->order_number = 0;
 	if(file){ file >> account_->user_number >> train_->train_number >> order_->order_number; }
-	else{ file.open("numbers",fstream::out); file.close(); }
+	else file.open("numbers",fstream::out); file.close();
+	
+	file.open("account_data",fstream::binary);
+	if(!file) file.open("account_data",fstream::binary | fstream::out); file.close();
+	file.open("train_data",fstream::binary);
+	if(!file) file.open("train_data",fstream::binary | fstream::out); file.close();
+	file.open("order_data",fstream::binary);
+	if(!file) file.open("order_data",fstream::binary | fstream::out); file.close();
+	
 	sjtu::string now;
 	now = get_token();
 	cout << now << ' ';

@@ -34,7 +34,7 @@ public:
 	bool is_login;
 	account(){}
 	account(const string &u){
-		for(int i = 0;i < u.size();i ++) username[i] = u[i];
+		for(int i = 0;i < u.size();i ++) username[i] = u[i]; username[u.size()] = '\0';
 	}
 	~account(){}
 	bool operator < (const account &other)const{ return id < other.id; }
@@ -48,10 +48,10 @@ public:
 		password_hash[1] = get_hash_value(1,p);
 	}
 	void modify_name(const string &n){
-		for(int i = 0;i < n.size();i ++) name[i] = n[i];
+		for(int i = 0;i < n.size();i ++) name[i] = n[i]; name[n.size()] = '\0';
 	}
 	void modify_mail(const string &n){
-		for(int i = 0;i < n.size();i ++) mailAddr[i] = n[i];
+		for(int i = 0;i < n.size();i ++) mailAddr[i] = n[i]; mailAddr[n.size()] = '\0';
 	}
 };
 
@@ -63,6 +63,7 @@ private:
 	int get_id(const string &username){
 		vector <int> vec;
 		account_id_map->find(username,vec);
+		cout << "GET_ID " << username << ' ' << vec.size() << endl;
 		return vec.size() ? vec[0] : -1;
 	}
 	void locate_read(account &acc,int x){
@@ -81,12 +82,12 @@ public:
 		account_data.close();
 		account_data.open("account_data",fstream::binary | fstream::out);
 		account_data.close();
-		account_data.open("account_data",fstream::binary | fstream::in | fstream::out);
+		account_data.open("account_data",fstream::binary | fstream::in | fstream::out | fstream::app);
 		account_id_map->clear();
 	}
 	account_management(){
 		account_id_map = new RainyMemory::AlternativeMultiBPlusTree <string,int> ("account_id_map");
-		account_data.open("account_data",fstream::binary | fstream::in | fstream::out);
+		account_data.open("account_data",fstream::binary | fstream::in | fstream::out | fstream::app);
 	}
 	~account_management(){
 		delete account_id_map;
@@ -100,15 +101,15 @@ public:
 			locate_write(now,i);
 		}
 	}
-	string add_user(const string &sc,const string &su,const string &p,const string &n,const string &m,int g){
+	int add_user(const string &sc,const string &su,const string &p,const string &n,const string &m,int g){
 		if(user_number == 0) g = 10;
 		else{
 			account c; int c_id = get_id(sc);
 			locate_read(c,c_id);
-			if(!c.is_login || g > c.privilege) return (string)("-1");
+			if(!c.is_login || g > c.privilege) return -1;
+			vector <int> vec; account_id_map->find(sc,vec);
+			if(vec.size()) return -1;
 		}
-		vector <int> vec; account_id_map->find(sc,vec); if(vec.size()) return (string)("-1");
-		
 		account u(su);
 		account_id_map->insert(su,user_number,user_number);
 		u.id = user_number;
@@ -119,7 +120,7 @@ public:
 		u.privilege = g;
 		locate_write(u,user_number); user_number ++;
 		string ret(u.username);
-		return ret + ' ' + (string)(u.name) + ' ' + (string)(u.mailAddr) + ' ' + int_to_string(u.privilege);
+		return 0;
 	}
 	int login(const string &u,const string &p){
 		account now; int now_id = get_id(u);
