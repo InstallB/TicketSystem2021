@@ -63,7 +63,6 @@ private:
 	int get_id(const string &username){
 		vector <int> vec;
 		account_id_map->find(username,vec);
-		cout << "GET_ID " << username << ' ' << vec.size() << endl;
 		return vec.size() ? vec[0] : -1;
 	}
 	void locate_read(account &acc,int x){
